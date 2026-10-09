@@ -1,0 +1,24 @@
+# Private configuration and generated data
+/android/
+.env
+.env.*
+!.env.example
+.venv/
+.tools/
+.pgdata/
+.pgpass
+.tmp/
+uploads/
+artifacts/
+__pycache__/
+*.pyc
+.pytest_cache/
+node_modules/
+dist/
+.idea/
+.gradle/
+**/build/
+local.properties
+*.log
+*.jks
+*.keystore
