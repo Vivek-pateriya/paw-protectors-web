@@ -14,12 +14,12 @@ This repository contains the **React website**, **FastAPI backend**, **PostgreSQ
 ## First-time setup
 
 1. Open the Windows Start menu, type **PowerShell**, and open it. Administrator mode is not required for these project commands.
-2. Clone this repository using the URL shown by GitHub's **Code** button. Replace `YOUR_USERNAME` with the repository owner:
+2. Clone this repository:
 
 ```powershell
 New-Item -ItemType Directory -Force "$HOME\Projects" | Out-Null
 Set-Location "$HOME\Projects"
-git clone https://github.com/YOUR_USERNAME/paw-protectors-web.git
+git clone https://github.com/Vivek-pateriya/paw-protectors-web.git
 Set-Location .\paw-protectors-web
 python --version
 node --version

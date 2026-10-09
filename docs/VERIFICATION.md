@@ -8,4 +8,4 @@
 
 The source was checked on Windows with Python 3.12.14 and Node 24.19.0. One upstream Starlette/AnyIO deprecation warning remains. The current pre-existing plain-JavaScript website was preserved outside this repository. This repository's frontend is implemented with React components/hooks.
 
-Run instructions are in the root README. PostgreSQL demonstrations and performance scripts are included; new benchmark runs write actual results locally rather than promising fixed timings. No GitHub remote was configured at preparation time; repository URL is pending from the owner.
+Run instructions are in the root README. PostgreSQL demonstrations and performance scripts are included; new benchmark runs write actual results locally rather than promising fixed timings. GitHub remote: https://github.com/Vivek-pateriya/paw-protectors-web.git. The Android companion remains a separate local repository.
