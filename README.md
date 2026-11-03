@@ -4,6 +4,8 @@ The React JS website and [React Native app](https://github.com/Vivek-pateriya/pa
 
 Features: authentication/recovery, pet profiles/photos, veterinary appointments, vaccination/medication reminders, moderated adoption, admin-managed Pet Shop, shared carts, INR/COD orders, notifications and reports. Admin pet screens show owner names/IDs. Photos display completely in centered frames.
 
+Created by **Vivek Pateriya** · [LinkedIn](https://www.linkedin.com/in/vivek-pateriya-73090a1a7/) · [Copyright notice](COPYRIGHT.md). Open **About the creator & project** in the website footer for more information. Click the Paw Protectors logo to return to the overview.
+
 ## First setup on Windows
 
 Requirements: Python 3.12+, Node.js 22.14+ with npm, and Git. Open PowerShell in your preferred projects folder:

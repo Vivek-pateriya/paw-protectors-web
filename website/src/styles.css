@@ -91,6 +91,48 @@ p {
   width: 43px;
   height: 43px;
 }
+.brand-home {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+.project-footer {
+  margin-top: 36px;
+  padding: 20px 0 0;
+  border-top: 1px solid var(--line);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  color: var(--muted);
+}
+.about-link {
+  padding: 8px 0;
+  border: 0;
+  background: transparent;
+  color: var(--green);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+}
+.about-dialog { line-height: 1.7; }
+.creator-photo {
+  display: block;
+  width: 180px;
+  max-width: 100%;
+  height: auto;
+  object-fit: contain;
+  border-radius: 14px;
+  margin: 0 auto 24px;
+}
+.about-dialog section { margin-top: 24px; }
+.about-dialog h3 { margin-bottom: 8px; }
+.about-dialog p { overflow-wrap: anywhere; }
+.about-dialog .eyebrow { margin-bottom: 8px; }
+.about-copyright { margin-top: 28px; color: var(--muted); font-size: 13px; }
 .brand small {
   display: block;
   font-size: 10px;

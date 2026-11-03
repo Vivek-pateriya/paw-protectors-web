@@ -5,6 +5,7 @@ import "./styles.css";
 import { CarePage, Recovery } from './CarePages';
 import { AdoptionPage } from './AdoptionPage';
 import { ShopPage } from './ShopPage';
+import { About, ProjectFooter } from './About';
 
 const stamp = (v) =>
   v
@@ -68,14 +69,14 @@ const vetFields = (v) => [
     boolean: true,
   }),
 ];
-function Brand() {
+function Brand({ onHome }) {
   return (
-    <div className="brand">
+    <button type="button" className="brand brand-home" onClick={onHome} aria-label="Paw Protectors home">
       <span className="brand-icon">🐾</span>
-      <div>
+      <span>
         Paw Protectors<small>CONNECTED PET CARE</small>
-      </div>
-    </div>
+      </span>
+    </button>
   );
 }
 function Button({ children, onClick, kind = "", ...props }) {
@@ -250,7 +251,7 @@ function Photo({ pet, token, detail = false }) {
     </div>
   );
 }
-function Auth({ onLogin }) {
+function Auth({ onLogin, onAbout }) {
   const [register, setRegister] = useState(false),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
@@ -276,7 +277,7 @@ function Auth({ onLogin }) {
   return (
     <div className="auth">
       <section className="auth-story">
-        <Brand />
+        <Brand onHome={() => { setRegister(false); setError(''); }} />
         <div>
           <p className="eyebrow">FOR THE ONES WHO MAKE LIFE BETTER</p>
           <h1>
@@ -349,6 +350,7 @@ function Auth({ onLogin }) {
             </div>
           </form>
           <Recovery />
+          <ProjectFooter onAbout={onAbout} />
         </div>
       </main>
     </div>
@@ -356,6 +358,7 @@ function Auth({ onLogin }) {
 }
 
 function App() {
+  const [showAbout, setShowAbout] = useState(false);
   const [token, setToken] = useState(
       () => sessionStorage.getItem("paw_web_token") || "",
     ),
@@ -1162,7 +1165,8 @@ function App() {
   if (!user)
     return (
       <>
-        <Auth onLogin={login} />
+        <Auth onLogin={login} onAbout={() => setShowAbout(true)} />
+        {showAbout && <About onClose={() => setShowAbout(false)} />}
         {notice && (
           <div id="toast" role="status">
             {notice}
@@ -1187,7 +1191,7 @@ function App() {
     <>
       <div className="shell">
         <aside className="sidebar">
-          <Brand />
+          <Brand onHome={() => go('dashboard')} />
           <p className="nav-label">YOUR CARE SPACE</p>
           <nav className="nav" aria-label="Main navigation">
             {nav.map(([page, icon, label]) => (
@@ -1259,8 +1263,10 @@ function App() {
           ) : (
             content()
           )}
+          <ProjectFooter onAbout={() => setShowAbout(true)} />
         </main>
       </div>
+      {showAbout && <About onClose={() => setShowAbout(false)} />}
       {modal && (
         <Modal
           config={modal}
