@@ -1,13 +1,10 @@
 """Single-store shopping. Lock carts/orders first, then products in ID order."""
 import hashlib
 import json
-import os
-from pathlib import Path
-from uuid import uuid4
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
-from fastapi.responses import FileResponse
 from backend import db
+from backend.photos import save_image, delete_image, image_response
 from backend.shop_models import Category, CategoryEdit, ProductCreate, ProductEdit, StockAdjustment, CartItem, Checkout, OrderDecision
 
 PRODUCT_FIELDS = ('category_id', 'sku', 'name', 'description', 'price_paise', 'low_stock_threshold', 'active')
@@ -167,24 +164,21 @@ def create_router(current_user, roles):
         if len(content)>5*1024*1024:raise HTTPException(413,'Image limit is 5 MB')
         ext='.jpg' if content.startswith(b'\xff\xd8\xff') else '.png' if content.startswith(b'\x89PNG\r\n\x1a\n') else None
         if not ext:raise HTTPException(422,'Select a JPEG or PNG image')
-        directory=Path(os.getenv('UPLOAD_DIR','uploads'));directory.mkdir(parents=True,exist_ok=True)
-        name=uuid4().hex+ext;path=directory/name;path.write_bytes(content)
+        name=save_image(content,ext)
         try:
             with db.connection(user['id']) as conn:
                 row=product_row(conn,pid,True);versioned(row,version)
                 conn.execute('UPDATE shop_products SET image_path=%s,version=version+1,updated_at=now() WHERE id=%s',(name,pid))
                 return product_row(conn,pid)
         except Exception:
-            path.unlink(missing_ok=True);raise
+            delete_image(name);raise
 
     @router.get('/products/{pid}/image')
     def image(pid:int,user=Depends(current_user)):
         with db.connection() as conn:
             row=product_row(conn,pid)
             if user['role']!='admin' and not published(row) and not conn.execute('SELECT 1 FROM shop_order_items i JOIN shop_orders o ON o.id=i.order_id WHERE i.product_id=%s AND o.user_id=%s LIMIT 1',(pid,user['id'])).fetchone():raise HTTPException(404,'Product not found')
-            path=Path(os.getenv('UPLOAD_DIR','uploads'))/(row['image_path'] or '_missing')
-            if not path.is_file():raise HTTPException(404,'No image')
-            return FileResponse(path)
+        return image_response(row['image_path'])
 
     @router.get('/cart')
     def cart(user=Depends(roles('owner','vet'))):

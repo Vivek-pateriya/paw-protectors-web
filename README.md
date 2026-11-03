@@ -90,6 +90,8 @@ Verification uses disposable PostgreSQL schemas in `paw_test`, not application r
 
 ## Data and documentation
 
+For a temporary online demo with the laptop switched off, see [Render Free + Cloudinary deployment](docs/FREE_RENDER_DEPLOYMENT.md). It covers the shared backend, private photo storage and non-destructive migration of existing records.
+
 GitHub contains source, migrations and public reference configuration. `.env`, password lists/mailbox, databases/backups, uploaded photos, generated APKs, build output and downloaded tools are excluded. A new clone creates its own data. Back up PostgreSQL and `uploads/` separately.
 
 - [Optional illustrated demo catalogue](docs/DEMO_CATALOGUE.md)

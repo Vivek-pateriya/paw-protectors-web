@@ -4,7 +4,7 @@ import os
 import secrets
 from contextlib import asynccontextmanager
 from pathlib import Path
-from uuid import uuid4
+from backend.photos import save_image, delete_image, image_response
 from datetime import date
 
 import psycopg
@@ -310,15 +310,13 @@ def upload_image(pet_id:int,file:UploadFile=File(...),user=Depends(current_user)
     extension = '.jpg' if content.startswith(b'\xff\xd8\xff') else '.png' if content.startswith(b'\x89PNG\r\n\x1a\n') else None
     if not extension:
         raise HTTPException(422,'Select a JPEG or PNG image')
-    directory=Path(os.getenv('UPLOAD_DIR','uploads')); directory.mkdir(parents=True,exist_ok=True)
-    filename=uuid4().hex+extension
-    path=directory/filename; path.write_bytes(content)
+    filename=save_image(content,extension)
     try:
         with db.connection(user['id']) as conn:
             pet_access(conn,pet_id,user)
             conn.execute('UPDATE pets SET image_path=%s WHERE id=%s',(filename,pet_id))
     except Exception:
-        path.unlink(missing_ok=True)
+        delete_image(filename)
         raise
     return {'image_path':filename}
 
@@ -327,10 +325,7 @@ def upload_image(pet_id:int,file:UploadFile=File(...),user=Depends(current_user)
 def get_image(pet_id:int,user=Depends(current_user)):
     with db.connection() as conn:
         data=pet_access(conn,pet_id,user,True)
-    path=Path(os.getenv('UPLOAD_DIR','uploads'))/(data['image_path'] or '_missing')
-    if not path.is_file():
-        raise HTTPException(404,'No image')
-    return FileResponse(path)
+    return image_response(data['image_path'])
 
 
 @app.get('/veterinarians')

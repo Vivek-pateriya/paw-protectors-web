@@ -1,11 +1,8 @@
 """Shared adoption workflow. All state changes lock the listing before applications."""
-import os
-from pathlib import Path
-from uuid import uuid4
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
-from fastapi.responses import FileResponse
 from backend import db
+from backend.photos import save_image, delete_image, image_response
 from backend.adoption_models import Application, Decision, Listing, ListingEdit, Review
 
 PUBLISHED = ('available', 'reserved', 'adopted')
@@ -190,8 +187,7 @@ def create_router(current_user, roles):
         if len(content)>5*1024*1024:raise HTTPException(413,'Image limit is 5 MB')
         extension='.jpg' if content.startswith(b'\xff\xd8\xff') else '.png' if content.startswith(b'\x89PNG\r\n\x1a\n') else None
         if not extension:raise HTTPException(422,'Select a JPEG or PNG image')
-        directory=Path(os.getenv('UPLOAD_DIR','uploads'));directory.mkdir(parents=True,exist_ok=True)
-        filename=uuid4().hex+extension;path=directory/filename;path.write_bytes(content)
+        filename=save_image(content,extension)
         try:
             with db.connection(user['id']) as conn:
                 row=fetch_listing(conn,listing_id,user['id'],True);editable(row,user,version)
@@ -201,16 +197,14 @@ def create_router(current_user, roles):
                 if state=='pending_review':notify(conn,administrators(conn),row,f'submitted:{version+1}','photo changed; review required')
                 result=present(fetch_listing(conn,listing_id,user['id']),user)
         except Exception:
-            path.unlink(missing_ok=True);raise
+            delete_image(filename);raise
         return result
 
     @router.get('/listings/{listing_id}/image')
     def image(listing_id:int,user=Depends(current_user)):
         with db.connection() as conn:
             row=fetch_listing(conn,listing_id,user['id']);visible(conn,row,user)
-        path=Path(os.getenv('UPLOAD_DIR','uploads'))/(row['image_path'] or '_missing')
-        if not path.is_file():raise HTTPException(404,'No listing photo')
-        return FileResponse(path)
+        return image_response(row['image_path'])
 
     @router.post('/listings/{listing_id}/applications',status_code=201)
     def apply(listing_id:int,data:Application,user=Depends(roles('owner'))):

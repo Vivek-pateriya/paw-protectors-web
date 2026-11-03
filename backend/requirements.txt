@@ -5,3 +5,4 @@ python-multipart==0.0.20
 python-dotenv==1.1.0
 httpx==0.28.1
 pytest==8.3.5
+cloudinary==1.46.3
