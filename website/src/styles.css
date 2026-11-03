@@ -481,7 +481,10 @@ p {
   margin-bottom: 8px;
 }
 .pet-face {
-  height: 150px;
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  height: 240px;
   background: #edf0df;
   border-radius: 15px;
   display: grid;
@@ -494,9 +497,46 @@ p {
   background: #f5e9d8;
 }
 .pet-face img {
+  position: absolute;
+  inset: 0;
+  display: block;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  min-width: 0;
+  min-height: 0;
+  object-fit: contain;
+  object-position: center;
+}
+.shop-photo {
+  width: 120px;
+  max-width: 100%;
+  height: 120px;
+  font-size: 48px;
+}
+.shop-photo img {
+  object-fit: contain;
+}
+.row-card > .shop-photo {
+  flex: 0 0 120px;
+  width: 120px;
+  height: 120px;
+  margin: 0;
+}
+.pet-face.photo-detail {
+  width: 100%;
+  height: clamp(280px, 40vw, 420px);
+  margin-bottom: 18px;
+}
+.shop-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  align-items: end;
+  gap: 0 16px;
+  margin: 20px 0;
+}
+.shop-filters > button {
+  margin-bottom: 16px;
+  justify-self: start;
 }
 .pet-meta {
   display: flex;
@@ -872,7 +912,12 @@ td .btn {
     grid-template-columns: 1fr;
   }
   .pet-face {
-    height: 180px;
+    height: 240px;
+  }
+  .row-card > .shop-photo {
+    flex: none;
+    width: 100%;
+    height: 240px;
   }
   .row-card {
     flex-direction: column;

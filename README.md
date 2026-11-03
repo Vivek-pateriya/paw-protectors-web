@@ -1,102 +1,97 @@
-# Paw Protectors — React website + Python backend
+# Paw Protectors — React JS + common backend
 
-Smart Pet Care and Management System with Advanced Database Transaction Processing.
+The React JS website and [React Native app](https://github.com/Vivek-pateriya/paw-protectors-App-react-native) use **one FastAPI service and one PostgreSQL database**. This repository provides that common backend, migrations and the React JS client. The legacy Java application is not included.
 
-This repository contains the **React website**, **FastAPI backend**, **PostgreSQL schema**, database demonstrations and tests. It contains **no Android application**. The companion repository is named `paw-protectors-android`.
+Features: authentication/recovery, pet profiles/photos, veterinary appointments, vaccination/medication reminders, moderated adoption, admin-managed Pet Shop, shared carts, INR/COD orders, notifications and reports. Admin pet screens show owner names/IDs. Photos display completely in centered frames.
 
-## Requirements on Windows
+## First setup on Windows
 
-- Python 3.12 with Python added to PATH: https://www.python.org/downloads/windows/
-- Node.js 24 LTS (includes npm): https://nodejs.org/
-- Git: https://git-scm.com/downloads/win
-- Internet access for the first dependency downloads. No Docker or emulator is needed.
-
-## First-time setup
-
-1. Open the Windows Start menu, type **PowerShell**, and open it. Administrator mode is not required for these project commands.
-2. Clone this repository:
+Requirements: Python 3.12+, Node.js 22.14+ with npm, and Git. Open PowerShell in your preferred projects folder:
 
 ```powershell
-New-Item -ItemType Directory -Force "$HOME\Projects" | Out-Null
-Set-Location "$HOME\Projects"
 git clone https://github.com/Vivek-pateriya/paw-protectors-web.git
-Set-Location .\paw-protectors-web
-python --version
-node --version
-npm --version
+cd paw-protectors-web
 powershell -ExecutionPolicy Bypass -File .\scripts\setup.ps1
-Set-Location .\website
-npm ci
-npm run build
-Set-Location ..
+cd website
+npm.cmd ci
+npm.cmd run build
+cd ..
 ```
 
-`setup.ps1` creates `.venv`, downloads PostgreSQL binaries into `.tools`, starts a private database on `127.0.0.1:55432`, applies migrations, seeds sample data, and generates `.env` and `artifacts/demo-credentials.txt`. It preserves existing user records. Do **not** copy `.env.example` to `.env` before this local setup; the script generates actual credentials. If `python` is unavailable but `py -3.12` works, use `py -3.12 -m venv .venv` first and then run the setup command above.
+Setup creates a private `.venv`, downloads project-local PostgreSQL, creates `.env` and the database, applies all six migrations, and seeds initial accounts only when the users table is empty. Existing accounts/data are preserved. Do not copy `.env.example` over an existing `.env`.
 
-For an already installed/configured PostgreSQL server, create `.env` using `.env.example`, provide your own database URL and random signing secret, and use `setup.ps1 -ExternalDatabase`. Create a separate `paw_test` database before running PostgreSQL tests. This mode does not download or start the private cluster.
+Initial emails: `owner@paw.local`, `vet@paw.local`, `admin@paw.local`. Their generated password is in your own gitignored `artifacts/demo-credentials.txt`. Passwords/database records from the original laptop are not included. Public registration creates owners; an admin can assign roles through Administration → User accounts.
 
-## Run the website
+## Start backend and website
 
-In PowerShell, open the cloned repository directory and run:
+From the repository directory:
 
 ```powershell
-Set-Location "$HOME\Projects\paw-protectors-web"
 powershell -ExecutionPolicy Bypass -File .\scripts\run.ps1
 ```
 
-Keep this terminal open. Open **http://127.0.0.1:8000/** in Chrome or Edge. The built React website and REST API use the same server. API documentation is at **http://127.0.0.1:8000/docs**; health is at `/health`.
+Keep this terminal open. It starts PostgreSQL if needed, applies missing migrations without reseeding, and starts FastAPI.
 
-For your own PostgreSQL server use `run.ps1 -ExternalDatabase`. If another Paw Protectors backend already listens on port 8000, use it for React development rather than starting a second server. To share the same database with Android, configure both backends with the same `DATABASE_URL` and `TOKEN_SECRET`, or run only one backend. Do not initialize two local clusters on port 55432 simultaneously.
+- Website: **http://127.0.0.1:8000/app** (also `/` in a standalone clone)
+- API documentation: http://127.0.0.1:8000/docs
+- Health: http://127.0.0.1:8000/health
+- Database: `127.0.0.1:55432`
 
-## Edit React during development
+FastAPI serves the built React website, so normal use needs no separate frontend server. Stop the API with **Ctrl+C**. Stop this project's database afterward with `powershell -ExecutionPolicy Bypass -File .\scripts\stop_db.ps1`.
 
-Keep the backend terminal running. Open a **second PowerShell window**:
+Inside the original `PET-SHOP/github-ready` workspace, setup/run reuse the workspace-root backend and database. A standalone clone uses this repository's backend. Run only one instance on port 8000.
+
+## Edit the website
+
+Keep the backend running. In a second PowerShell window:
 
 ```powershell
-Set-Location "$HOME\Projects\paw-protectors-web\website"
-npm ci
-npm run dev
+cd paw-protectors-web\website
+npm.cmd run dev
 ```
 
-Open **http://127.0.0.1:5173/**. Vite forwards API requests to port 8000; no permissive CORS configuration is required. After changes, run `npm run build` and restart the backend to serve the new build on port 8000. Do not open `index.html` directly from File Explorer.
+Open **http://127.0.0.1:5173**. Vite forwards API calls to port 8000. Run `npm.cmd run build` after edits to update the website served at `/app`.
 
-## Login and features
+## Connect the React Native app
 
-Register a pet owner, or use `owner@paw.local`, `vet@paw.local`, or `admin@paw.local`. Find the generated password locally:
+Clone the mobile repository beside this one:
 
-```powershell
-Get-Content .\artifacts\demo-credentials.txt
+```text
+Projects/
+  paw-protectors-web/                 # common backend/database + React JS
+  paw-protectors-App-react-native/    # mobile client
 ```
 
-Owner: pet profiles/photos, vaccination history, medical history, vet listings, bookings/cancellation and reminders. Veterinarian: assigned patients, clinical records, availability/slots and appointment completion. Admin: user roles/access, vet profiles, appointment monitoring, analytics and transaction audits. Backend roles and ownership protect all API operations. Photos use authenticated requests; passwords are hashed; sessions are revocable.
+Follow the mobile README to build/open Paw Protectors RN. For USB, forward port 8000 and use `http://127.0.0.1:8000` in Account → Server connection. The installed standalone app needs the common backend but does not need Metro.
 
-## Tests and faculty demonstrations
+For trusted Wi-Fi development, use `run.ps1 -ListenAddress 0.0.0.0`, connect laptop and phone to the same network, and enter `http://LAPTOP_IPV4:8000` in the app. Allow that port on the private network if Windows prompts. Public hosting requires HTTPS, PostgreSQL and persistent uploaded-photo storage. Never put database credentials in the mobile app.
 
-From the repository root in PowerShell:
+## Use an existing PostgreSQL server
+
+Create a private `.env` from `.env.example`, set your own `DATABASE_URL` and random `TOKEN_SECRET` (at least 32 characters), then use:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\verify.ps1
-.\.venv\Scripts\python.exe -m scripts.http_smoke
+powershell -ExecutionPolicy Bypass -File .\scripts\setup.ps1 -ExternalDatabase
+powershell -ExecutionPolicy Bypass -File .\scripts\run.ps1 -ExternalDatabase
+```
+
+Build the website before starting. Create a separate `paw_test` database for verification.
+
+## Verification
+
+```powershell
+.\.venv\Scripts\python.exe -m scripts.verify
 .\.venv\Scripts\python.exe -m scripts.backup_restore_test
-.\.venv\Scripts\python.exe -m scripts.inspect_db
-Set-Location .\website
-npm run build
 ```
 
-`verify.ps1` runs real PostgreSQL integration/security tests, 100 simultaneous booking attempts (one success, 99 conflicts), rollback, READ COMMITTED, SERIALIZABLE, locking/deadlock recovery and a measured 200,000-row indexing benchmark. Results are written to ignored `artifacts/`. See `docs/DBMS_DEMO.md` for SQL demonstration commands and `docs/VERIFICATION.md` for executed checks. Tests use an isolated schema and preserve application records. Socket HTTP smoke tests need the running backend.
+Verification uses disposable PostgreSQL schemas in `paw_test`, not application records. The GitHub publication check passed 44 backend tests from a clean checkout, 22 mobile client tests, TypeScript, the web build and the mobile Android bundle. The mobile API integration also passed against this packaged common backend. Earlier APK, phone and browser checks are documented separately.
 
-## Stop
+## Data and documentation
 
-Press **Ctrl+C** in the backend terminal (and the Vite terminal if used). Then, from the repository root:
+GitHub contains source, migrations and public reference configuration. `.env`, password lists/mailbox, databases/backups, uploaded photos, generated APKs, build output and downloaded tools are excluded. A new clone creates its own data. Back up PostgreSQL and `uploads/` separately.
 
-```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\stop_db.ps1
-```
-
-Stop the private database only after all clients using it have stopped. Do not run this command for an external PostgreSQL server.
-
-## Repository contents and security
-
-`website/` — React/Vite source and package lockfile. `backend/` — FastAPI/Psycopg. `database/` — migrations, constraints, functions, triggers and views. `tests/`, `scripts/`, `docs/` — verification and Windows helpers.
-
-`.env`, generated account credentials, photos, database files, `.venv`, downloaded tools, `node_modules`, build outputs and APKs are excluded from Git. Commit `.env.example` only. Local development uses loopback HTTP; remote deployment requires HTTPS and deployment configuration. The website is not automatically deployed by pushing this repository.
+- [Optional illustrated demo catalogue](docs/DEMO_CATALOGUE.md)
+- [Adoption](docs/ADOPTION_MODULE.md)
+- [Pet Shop](docs/PET_SHOP_MODULE.md)
+- [Care modules](docs/CARE_MODULES.md)
+- [Measured phone acceptance and remaining checks](docs/PHONE_ACCEPTANCE_2026-11-03.md)

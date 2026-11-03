@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from datetime import date,timedelta
 from concurrent.futures import ThreadPoolExecutor
 from threading import Barrier
@@ -44,9 +45,22 @@ def test_health_and_auth(client):
     assert client.post('/auth/register',json={'name':'x','email':'first@test.local','password':'TestPassword123!'}).status_code==409
 
 
-def test_api_documentation(client):
-    assert client.get('/docs').status_code == 200
-    assert client.get('/openapi.json').json()['info']['title'] == 'Paw Protectors'
+def test_website_served_by_shared_backend(client):
+    response=client.get('/')
+    if Path('website/package.json').is_file():
+        from backend.main import react_dir
+        if not (react_dir/'index.html').is_file():
+            assert response.status_code==503
+        else:
+            assert response.status_code==200 and '/assets/' in response.text
+        return
+    assert response.status_code==200
+    assert 'Paw Protectors' in response.text
+    assert '/website/app.js' in response.text
+    assert client.get('/website/').status_code==200
+    assert client.get('/website/styles.css').status_code==200
+    assert client.get('/website/app.js').status_code==200
+    assert client.get('/website/../../.env').status_code==404
 
 
 def test_pet_crud_and_authorization(client):
@@ -58,6 +72,32 @@ def test_pet_crud_and_authorization(client):
     assert client.put(f'/pets/{pid}',headers=a,json={**body,'age_months':18}).json()['age_months']==18
     assert client.post('/pets',headers=a,json={**body,'age_months':-1}).status_code==422
     assert client.delete(f'/pets/{pid}',headers=a).status_code==204
+
+
+def test_admin_pet_owner_mapping_and_privacy(client,isolated_db):
+    first,first_id=register(client,'owner-map-first@test.local')
+    second,second_id=register(client,'owner-map-second@test.local')
+    admin,admin_id=register(client,'owner-map-admin@test.local')
+    with psycopg.connect(isolated_db) as conn:
+        conn.execute("UPDATE users SET role='admin',name='Mapping Admin' WHERE id=%s",(admin_id,))
+        conn.execute("UPDATE users SET name='First Pet Owner' WHERE id=%s",(first_id,))
+        conn.execute("UPDATE users SET name='Second Pet Owner',active=false WHERE id=%s",(second_id,))
+    a=client.post('/pets',headers=first,json={'name':'Same pet name','species':'Dog'}).json()
+    with psycopg.connect(isolated_db) as conn:
+        b=conn.execute("INSERT INTO pets(owner_id,name,species,gender) VALUES(%s,'Same pet name','Cat','unknown') RETURNING id",(second_id,)).fetchone()[0]
+    rows={p['id']:p for p in client.get('/pets',headers=admin).json()}
+    assert (rows[a['id']]['owner_id'],rows[a['id']]['owner_name'])==(first_id,'First Pet Owner')
+    assert (rows[b]['owner_id'],rows[b]['owner_name'])==(second_id,'Second Pet Owner')
+    detail=client.get(f'/pets/{b}',headers=admin).json()
+    assert detail['owner_id']==second_id and detail['owner_name']=='Second Pet Owner'
+    edited=client.put(f'/pets/{b}',headers=admin,json={'name':'Renamed pet','species':'Cat'}).json()
+    assert edited['owner_id']==second_id and edited['owner_name']=='Second Pet Owner'
+    own=client.get('/pets',headers=first).json()
+    assert all(p['owner_id']==first_id and 'owner_name' not in p for p in own)
+    assert 'owner_name' not in client.get(f'/pets/{a["id"]}',headers=first).json()
+    assert client.get(f'/pets/{b}',headers=first).status_code==403
+    created=client.post('/pets',headers=admin,json={'name':'Admin companion','species':'Dog'}).json()
+    assert created['owner_id']==admin_id and created['owner_name']=='Mapping Admin'
 
 
 def test_vaccination_trigger_and_medical_permissions(client):

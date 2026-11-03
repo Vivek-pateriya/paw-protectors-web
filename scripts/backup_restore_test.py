@@ -22,7 +22,10 @@ if __name__=='__main__':
         subprocess.run([sys.executable,'-m','scripts.backup','restore',str(archive),'--target-db',name],check=True)
         counts={}
         with psycopg.connect(url) as source,psycopg.connect(make_conninfo(url,dbname=name)) as target:
-            for table in ['users','pets','veterinarians','appointment_slots','appointments','medical_records','vaccination_records','reminders','audit_logs','schema_versions','revoked_sessions']:
+            tables=[row[0] for row in source.execute("SELECT tablename FROM pg_tables WHERE schemaname='public' ORDER BY tablename")]
+            restored_tables=[row[0] for row in target.execute("SELECT tablename FROM pg_tables WHERE schemaname='public' ORDER BY tablename")]
+            assert tables==restored_tables,'Restored table inventory differs'
+            for table in tables:
                 query=sql.SQL('SELECT count(*) FROM {}').format(sql.Identifier(table))
                 a,b=source.execute(query).fetchone()[0],target.execute(query).fetchone()[0]
                 assert a==b,(table,a,b);counts[table]={'source':a,'restored':b}

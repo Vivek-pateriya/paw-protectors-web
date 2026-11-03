@@ -2,6 +2,9 @@ import React, { useState, useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import { request } from "./api";
 import "./styles.css";
+import { CarePage, Recovery } from './CarePages';
+import { AdoptionPage } from './AdoptionPage';
+import { ShopPage } from './ShopPage';
 
 const stamp = (v) =>
   v
@@ -42,6 +45,8 @@ const petFields = (p) => [
     required: false,
     maxLength: 5000,
   }),
+  F('weight_kg','Weight in kg (optional)','number',p.weight_kg??'',{required:false,min:0.001,max:2000,step:0.001,nullable:true}),
+  F('allergies','Allergies','textarea',p.allergies||'',{required:false,maxLength:5000}),
 ];
 const vetFields = (v) => [
   F(
@@ -105,6 +110,7 @@ function Field({ field: f }) {
       max: f.max,
       maxLength: f.maxLength,
       minLength: f.minLength,
+      step: f.step,
     };
   return (
     <React.Fragment>
@@ -146,7 +152,7 @@ function Modal({ config, onClose, onSaved }) {
     try {
       const data = Object.fromEntries(new FormData(e.currentTarget));
       for (const f of config.fields) {
-        if (f.type === "number") data[f.name] = Number(data[f.name]);
+        if (f.type === "number") data[f.name] = data[f.name]===''&&f.nullable?null:Number(data[f.name]);
         if (f.boolean) data[f.name] = data[f.name] === "true";
         if (f.nullable && !data[f.name]) data[f.name] = null;
         if (f.type === "datetime-local")
@@ -201,7 +207,7 @@ function Modal({ config, onClose, onSaved }) {
     </dialog>
   );
 }
-function Photo({ pet, token }) {
+function Photo({ pet, token, detail = false }) {
   const [src, setSrc] = useState("");
   useEffect(() => {
     let url,
@@ -233,7 +239,7 @@ function Photo({ pet, token }) {
   return (
     <div
       className={
-        "pet-face " + (pet.species.toLowerCase() === "cat" ? "cat" : "")
+        "pet-face " + (detail ? 'photo-detail ' : '') + (pet.species.toLowerCase() === "cat" ? "cat" : "")
       }
     >
       {src ? (
@@ -342,6 +348,7 @@ function Auth({ onLogin }) {
               </Button>
             </div>
           </form>
+          <Recovery />
         </div>
       </main>
     </div>
@@ -415,7 +422,8 @@ function App() {
     async function load() {
       const { page, id } = route;
       let result;
-      if (page === "dashboard") {
+      if (['account','notifications','reports','medications','adoption','shop'].includes(page)) result={};
+      else if (page === "dashboard") {
         const [pets, visits, reminders, vets] = await Promise.all(
           ["/pets", "/appointments", "/reminders", "/veterinarians"].map(get),
         );
@@ -547,6 +555,7 @@ function App() {
         <Photo pet={p} token={token} />
         <h3>{p.name}</h3>
         <p>{p.breed || p.species}</p>
+        {user.role === 'admin' && <p><strong>Owner:</strong> {p.owner_name || '—'}<br /><strong>Owner ID:</strong> {p.owner_id}</p>}
         <div className="pet-meta">
           {p.age_months} months · {p.gender}
           <span className="pill">{p.species}</span>
@@ -607,6 +616,9 @@ function App() {
   }
   function content() {
     const { page, id } = route;
+    if (page==='adoption') return <AdoptionPage user={user} token={token} onExpired={clearSession}/>;
+    if (page==='shop') return <ShopPage user={user} token={token} onExpired={clearSession}/>;
+    if (['account','notifications','reports','medications'].includes(page)) return <CarePage key={page+String(id||'')} page={page} id={id} user={user} token={token} onSession={response=>{sessionStorage.setItem('paw_web_token',response.token);setToken(response.token);setUser(response.user);}}/>;
     if (page === "dashboard") {
       const upcoming = data.visits.filter((a) => a.status === "booked");
       return (
@@ -639,6 +651,7 @@ function App() {
             </div>
             <div className="hero-paw">🐾</div>
           </section>
+          <div className="actions"><Button kind="secondary" onClick={() => go('adoption')}>Find a companion to adopt</Button></div>
           <div className="stats">
             {[
               ["Pet profiles", data.pets.length],
@@ -653,7 +666,7 @@ function App() {
             ))}
           </div>
           <div className="section-title">
-            <h2>Your companions</h2>
+            <h2>{user.role === 'admin' ? 'All pets' : 'Your companions'}</h2>
             <Button kind="ghost" onClick={() => go("pets")}>
               View all →
             </Button>
@@ -675,7 +688,7 @@ function App() {
         <>
           <Heading
             title={
-              user.role === "vet" ? "Pets in your care" : "Your companions"
+              user.role === 'admin' ? 'All pets' : user.role === "vet" ? "Pets in your care" : "Your companions"
             }
             action={
               user.role !== "vet" && (
@@ -705,8 +718,9 @@ function App() {
           </Heading>
           <div className="two-col">
             <article className="card">
-              <Photo pet={p} token={token} />
+              <Photo pet={p} token={token} detail />
               <h2>{p.name}</h2>
+              {user.role === 'admin' && <p><strong>Owner:</strong> {p.owner_name || '—'}<br /><strong>Owner ID:</strong> {p.owner_id}</p>}
               <p>
                 {p.species} · {p.breed}
               </p>
@@ -716,6 +730,8 @@ function App() {
               <p className="note">
                 {p.medical_notes || "No additional medical notes."}
               </p>
+              <p>Weight: {p.weight_kg ? `${p.weight_kg} kg` : 'Not recorded'}</p><p>Allergies: {p.allergies||'Not recorded'}</p>
+              <Button kind="secondary" onClick={()=>go('medications',p.id)}>Medication schedules</Button>
               {user.role !== "vet" && (
                 <>
                   <div className="actions">
@@ -1016,6 +1032,13 @@ function App() {
               ["Booked visits", data.booked],
               ["Cancelled visits", data.cancelled],
               ["Audit events", data.audit_events],
+              ['Adoption listings awaiting approval', data.adoption_pending_review],
+              ['Available for adoption', data.adoption_available],
+              ['Pending adoption applications', data.adoption_pending_applications],
+              ['Completed adoptions', data.adoption_completed],
+              ['Published shop products', data.shop_published_products],
+              ['New shop orders', data.shop_new_orders],
+              ['Shop products low in stock', data.shop_low_stock],
             ].map(([label, n]) => (
               <article className="stat" key={label}>
                 <small>{label}</small>
@@ -1029,6 +1052,8 @@ function App() {
               ["Veterinarians", "vets"],
               ["Monitor visits", "appointments"],
               ["Transaction audit", "audit"],
+              ['Manage adoption', 'adoption'],
+              ['Manage Pet Shop', 'shop'],
             ].map(([label, page]) => (
               <Button key={page} onClick={() => go(page)}>
                 {label}
@@ -1046,6 +1071,7 @@ function App() {
               <thead>
                 <tr>
                   <th>Name</th>
+                  <th>User ID</th>
                   <th>Email</th>
                   <th>Role</th>
                   <th>Status</th>
@@ -1056,6 +1082,7 @@ function App() {
                 {data.map((u) => (
                   <tr key={u.id}>
                     <td>{u.name}</td>
+                    <td>{u.id}</td>
                     <td>{u.email}</td>
                     <td>{u.role}</td>
                     <td>{u.active ? "Active" : "Disabled"}</td>
@@ -1145,10 +1172,15 @@ function App() {
     );
   const nav = [
     ["dashboard", "◫", "Overview"],
-    ["pets", "♡", "My pets"],
+    ["pets", "♡", user.role === 'admin' ? 'All pets' : "My pets"],
+    ['adoption','♡','Adoption'],
+    ['shop','🛍','Pet Shop'],
     ["vets", "✚", "Veterinarians"],
     ["appointments", "▦", "Appointments"],
     ["reminders", "◷", "Reminders"],
+    ['notifications','◷','Notifications'],
+    ['reports','▤','Activity reports'],
+    ['account','⚙','My account'],
     ...(user.role === "admin" ? [["admin", "⚙", "Administration"]] : []),
   ];
   return (
@@ -1195,6 +1227,7 @@ function App() {
                   slots: "Schedule",
                   users: "User accounts",
                   audit: "Transaction audit",
+                  medications: 'Medication schedules',
                 }[route.page]}
             </div>
             <div className="user">

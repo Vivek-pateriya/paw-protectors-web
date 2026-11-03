@@ -22,3 +22,10 @@ local.properties
 *.log
 *.jks
 *.keystore
+*.pem
+*.key
+*.p12
+*.dump
+*.apk
+
+artifacts/private-mailbox/

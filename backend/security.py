@@ -32,16 +32,16 @@ def secret() -> bytes:
     return value.encode()
 
 
-def issue_token(user_id: int) -> str:
+def issue_token(user_id: int, session_version: int = 0) -> str:
     payload = base64.urlsafe_b64encode(json.dumps({
-        'sub': user_id, 'exp': int(time.time()) + int(os.getenv('TOKEN_TTL_SECONDS', '28800')),
+        'sub': user_id, 'ver': session_version, 'exp': int(time.time()) + int(os.getenv('TOKEN_TTL_SECONDS', '28800')),
         'nonce': secrets.token_hex(8),
     }, separators=(',', ':')).encode()).rstrip(b'=').decode()
     signature = hmac.new(secret(), payload.encode(), hashlib.sha256).hexdigest()
     return payload + '.' + signature
 
 
-def decode_token(token: str) -> int:
+def token_claims(token: str) -> dict:
     try:
         payload, signature = token.split('.')
         expected = hmac.new(secret(), payload.encode(), hashlib.sha256).hexdigest()
@@ -50,6 +50,12 @@ def decode_token(token: str) -> int:
         data = json.loads(base64.urlsafe_b64decode(payload + '=' * (-len(payload) % 4)))
         if data['exp'] <= time.time():
             raise ValueError('Expired session')
-        return int(data['sub'])
+        data['sub'] = int(data['sub'])
+        data['ver'] = int(data.get('ver', 0))
+        return data
     except (KeyError, TypeError, UnicodeError, json.JSONDecodeError) as exc:
         raise ValueError('Invalid session') from exc
+
+
+def decode_token(token: str) -> int:
+    return token_claims(token)['sub']

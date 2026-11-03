@@ -1,7 +1,9 @@
 param([string]$Python = 'python', [switch]$ExternalDatabase)
 $ErrorActionPreference = 'Stop'
-$projectRoot = Split-Path $PSScriptRoot -Parent
-Set-Location -LiteralPath $projectRoot
+$repositoryRoot = Split-Path $PSScriptRoot -Parent
+$workspaceRoot = [IO.Path]::GetFullPath((Join-Path $repositoryRoot '..\..'))
+$serverRoot = if (Test-Path -LiteralPath (Join-Path $workspaceRoot 'backend\main.py')) { $workspaceRoot } else { $repositoryRoot }
+Set-Location -LiteralPath $serverRoot
 if (-not (Test-Path '.venv\Scripts\python.exe')) {
     & $Python -m venv .venv
     if ($LASTEXITCODE -ne 0) { throw 'Python virtual environment creation failed' }
